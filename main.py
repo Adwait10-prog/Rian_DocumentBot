@@ -88,22 +88,40 @@ def text_to_speech(text, voice_id="voice_id"):
 
 # Function to capture speech and convert it to text using speech_recognition
 def speech_to_text():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.write("Say something...")
-        audio = recognizer.listen(source)
-        try:
-            # Use Google's speech recognition (offline works in most cases)
-            recognized_text = recognizer.recognize_google(audio)
-            st.write(f"Recognized: {recognized_text}")
-            return recognized_text
-        except sr.UnknownValueError:
-            st.error("Could not understand the audio. Please try again.")
-            return ""
-        except sr.RequestError as e:
-            st.error(f"Speech recognition service error: {e}")
-            return ""
+    import sounddevice as sd
+    import numpy as np
+    import wave
+    from scipy.io.wavfile import write
 
+    recognizer = sr.Recognizer()
+    
+    st.write("Recording audio for 5 seconds...")
+
+    # Record audio for a fixed duration
+    duration = 5  # seconds
+    sample_rate = 44100  # Hertz
+    channels = 1  # Mono
+
+    # Record audio using sounddevice
+    try:
+        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=channels, dtype='int16')
+        sd.wait()  # Wait for the recording to finish
+        audio_array = np.squeeze(audio_data)
+
+        # Save audio as WAV for recognition
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
+            write(temp_audio_file.name, sample_rate, audio_array)
+
+            # Recognize the audio
+            with sr.AudioFile(temp_audio_file.name) as source:
+                audio = recognizer.record(source)
+                recognized_text = recognizer.recognize_google(audio)
+                st.write(f"Recognized: {recognized_text}")
+                return recognized_text
+
+    except Exception as e:
+        st.error(f"Error during speech recognition: {e}")
+        return ""
 # Streamlit app
 def main():
     st.title("Swayam Talks Chatbot")
