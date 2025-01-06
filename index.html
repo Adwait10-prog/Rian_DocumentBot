@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swayam Talks Chatbot</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Swayam Talks Chatbot</h1>
+        <div class="input-section">
+            <label for="question">Ask a question:</label>
+            <input type="text" id="question" placeholder="Type your question here">
+            <button onclick="askQuestion()">Submit</button>
+        </div>
+        <div class="input-section">
+            <label for="audio">Or speak your question:</label>
+            <input type="file" id="audio" accept="audio/*">
+            <button onclick="uploadAudio()">Upload</button>
+        </div>
+        <div id="response"></div>
+        <div id="history"></div>
+    </div>
+    <script src="/static/js/scripts.js"></script>
+</body>
+</html>
