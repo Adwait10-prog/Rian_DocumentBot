@@ -9,7 +9,6 @@ import pygame
 import tempfile
 import speech_recognition as sr
 
-
 # Define the Chatbot API URL and headers
 api_url = "https://llm.kindo.ai/v1/chat/completions"
 headers = {
@@ -21,17 +20,11 @@ headers = {
 elevenlabs_client = ElevenLabs(api_key="ae38aba75e228787e91ac4991fc771f8")  # Replace with your ElevenLabs API key
 
 # Function to extract text from PDF
-def extract_text_from_pdf(file_path , file_path_2):
-    pdf_reader = PdfReader(file_path , file_path_2)
+def extract_text_from_pdf(file_path, file_path_2):
+    pdf_reader = PdfReader(file_path, file_path_2)
     text = ""
     for page in pdf_reader.pages:
         text += page.extract_text()
-    return text
-
-# Function to extract text from Word file
-def extract_text_from_word(file):
-    doc = Document(file)
-    text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
     return text
 
 # Function to query the Chatbot API
@@ -53,75 +46,25 @@ def ask_question(question, context, model_name="azure/gpt-4o"):
         st.error(f"API request failed with status code {response.status_code}")
         return None
 
-# Function to play audio using pygame
-def play_audio_stream(audio_stream):
-    pygame.mixer.init()
-    
-    # Save audio stream to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
-        for chunk in audio_stream:
-            temp_audio.write(chunk)
-        temp_audio_name = temp_audio.name
-
-    # Load and play the audio file
-    pygame.mixer.music.load(temp_audio_name)
-    pygame.mixer.music.play()
-    
-    # Wait until the audio is finished
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-
-# Function to convert text to speech
-def text_to_speech(text, voice_id="voice_id"):
-    try:
-        audio_stream = elevenlabs_client.text_to_speech.convert_as_stream(
-            voice_id=voice_id,
-            text=text, 
-            model_id = "eleven_multilingual_v2", # Added missing comma here
-            voice_settings=VoiceSettings(stability=0.5,
-		similarity_boost=0.75,
-		style=0.0)
-        )
-        play_audio_stream(audio_stream)
-    except Exception as e:
-        st.error(f"Text-to-speech conversion failed: {e}")
-
-# Function to capture speech and convert it to text using speech_recognition
+# Function to capture speech and convert it to text using Google Web Speech API
 def speech_to_text():
-    import sounddevice as sd
-    import numpy as np
-    import wave
-    from scipy.io.wavfile import write
-
     recognizer = sr.Recognizer()
-    
-    st.write("Recording audio for 5 seconds...")
+    with sr.Microphone() as source:
+        st.write("Say something...")
+        try:
+            # Listen to the microphone
+            audio = recognizer.listen(source)
+            # Recognize speech using Google Web Speech API
+            recognized_text = recognizer.recognize_google(audio)
+            st.write(f"Recognized: {recognized_text}")
+            return recognized_text
+        except sr.UnknownValueError:
+            st.error("Could not understand the audio. Please try again.")
+            return ""
+        except sr.RequestError as e:
+            st.error(f"Speech recognition service error: {e}")
+            return ""
 
-    # Record audio for a fixed duration
-    duration = 5  # seconds
-    sample_rate = 44100  # Hertz
-    channels = 1  # Mono
-
-    # Record audio using sounddevice
-    try:
-        audio_data = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=channels, dtype='int16')
-        sd.wait()  # Wait for the recording to finish
-        audio_array = np.squeeze(audio_data)
-
-        # Save audio as WAV for recognition
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
-            write(temp_audio_file.name, sample_rate, audio_array)
-
-            # Recognize the audio
-            with sr.AudioFile(temp_audio_file.name) as source:
-                audio = recognizer.record(source)
-                recognized_text = recognizer.recognize_google(audio)
-                st.write(f"Recognized: {recognized_text}")
-                return recognized_text
-
-    except Exception as e:
-        st.error(f"Error during speech recognition: {e}")
-        return ""
 # Streamlit app
 def main():
     st.title("Swayam Talks Chatbot")
@@ -136,7 +79,6 @@ def main():
     # Extract text from the hardcoded PDF
     try:
         context = extract_text_from_pdf(pdf_file_path, pdf_file_path_2)
-        
     except FileNotFoundError:
         st.error("The hardcoded PDF file was not found. Please check the file path.")
         return
@@ -155,9 +97,6 @@ def main():
         if answer:
             # Add question and answer to session state
             st.session_state.qa_history.append((question, answer))
-            
-            # Convert answer to speech
-            text_to_speech(answer, voice_id="okq89CVMFdUItYbOQspc")  # Replace with your ElevenLabs voice ID
 
     # Display Q&A history
     if st.session_state.qa_history:
